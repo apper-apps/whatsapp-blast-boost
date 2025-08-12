@@ -1,13 +1,14 @@
-import { useState } from "react";
-import Card from "@/components/atoms/Card";
-import Button from "@/components/atoms/Button";
-import Textarea from "@/components/atoms/Textarea";
+import React, { useRef, useState } from "react";
+import { toast } from "react-toastify";
+import ApperIcon from "@/components/ApperIcon";
 import FormField from "@/components/molecules/FormField";
 import FileUploadZone from "@/components/molecules/FileUploadZone";
-import ApperIcon from "@/components/ApperIcon";
-import { toast } from "react-toastify";
+import Error from "@/components/ui/Error";
+import Button from "@/components/atoms/Button";
+import Textarea from "@/components/atoms/Textarea";
+import Card from "@/components/atoms/Card";
 
-const ContactImporter = ({ onContactsImported }) => {
+const ContactImporter = ({ onContactsImported, disabled = false, apiConfigured = false }) => {
   const [textInput, setTextInput] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,7 +81,7 @@ const ContactImporter = ({ onContactsImported }) => {
     });
   };
 
-  const handleImportFromText = async () => {
+const handleImportFromText = async () => {
     if (!textInput.trim()) {
       toast.error("Please enter phone numbers to import");
       return;

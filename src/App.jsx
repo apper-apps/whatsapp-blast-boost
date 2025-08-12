@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import Dashboard from "@/components/pages/Dashboard";
+import APIConfigPage from "@/components/pages/APIConfigPage";
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/api-config" element={<APIConfigPage />} />
         </Routes>
         
         <ToastContainer

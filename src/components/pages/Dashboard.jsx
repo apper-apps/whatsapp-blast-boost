@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import APIConfigPanel from "@/components/organisms/APIConfigPanel";
+import { Link } from "react-router-dom";
 import ContactImporter from "@/components/organisms/ContactImporter";
 import MessageComposer from "@/components/organisms/MessageComposer";
 import SendProgressTracker from "@/components/organisms/SendProgressTracker";
@@ -8,16 +8,20 @@ import { toast } from "react-toastify";
 import whatsappService from "@/services/api/whatsappService";
 
 const Dashboard = () => {
-  const [apiConfig, setApiConfig] = useState({
-    bearerToken: "",
-    phoneId: "",
-    businessAccountId: "",
-    isValid: false
+  // Get API config from localStorage to check validation status
+  const [apiConfig, setApiConfig] = useState(() => {
+    const saved = localStorage.getItem('whatsapp-api-config');
+    return saved ? JSON.parse(saved) : {
+      bearerToken: "",
+      phoneId: "",
+      businessAccountId: "",
+      isValid: false
+    };
   });
   
   const [contacts, setContacts] = useState([]);
   const [message, setMessage] = useState({
-    content: "",
+    templateId: "",
     variables: [],
     characterCount: 0
   });
@@ -31,27 +35,24 @@ const Dashboard = () => {
     status: "idle"
   });
 
-  const handleConfigUpdate = (config) => {
-    setApiConfig(prev => ({ ...prev, ...config }));
-  };
+  // Listen for API config changes from localStorage
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'whatsapp-api-config') {
+        const newConfig = e.newValue ? JSON.parse(e.newValue) : {
+          bearerToken: "",
+          phoneId: "",
+          businessAccountId: "",
+          isValid: false
+        };
+        setApiConfig(newConfig);
+      }
+    };
 
-  const handleValidateAPI = async (config) => {
-    try {
-      // Simulate API validation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock validation logic
-      const isValid = config.bearerToken.startsWith("EAA") && 
-                     config.phoneId.length >= 15 && 
-                     config.businessAccountId.length >= 15;
-      
-      setApiConfig(prev => ({ ...prev, ...config, isValid }));
-      return isValid;
-    } catch (error) {
-      console.error("API validation error:", error);
-      return false;
-    }
-  };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
 
   const handleContactsImported = (importedContacts) => {
     setContacts(importedContacts);
@@ -61,7 +62,7 @@ const Dashboard = () => {
     setMessage(updatedMessage);
   };
 
-  const handleSendAll = async () => {
+const handleSendAll = async () => {
     if (!apiConfig.isValid) {
       toast.error("Please configure and validate API settings first");
       return;
@@ -82,7 +83,7 @@ const Dashboard = () => {
     setSendJob({
       id: jobId,
       contacts: [...contacts],
-      message: { ...message },
+message: { ...message },
       startTime: new Date(),
       endTime: null,
       status: "running"
@@ -101,7 +102,7 @@ const Dashboard = () => {
 
     // Simulate sending process
     try {
-      await whatsappService.sendBulkMessages(
+await whatsappService.sendBulkMessages(
         resetContacts,
         message,
         apiConfig,
@@ -214,17 +215,42 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Configuration */}
           <div className="space-y-8">
-            <APIConfigPanel
-              config={apiConfig}
-              onConfigUpdate={handleConfigUpdate}
-              onValidate={handleValidateAPI}
-            />
+<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="text-center">
+                <ApperIcon name="Settings" size={48} className="mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  API Configuration
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Configure your WhatsApp Business API settings to start sending messages.
+                </p>
+                <Link 
+                  to="/api-config"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-whatsapp-primary text-white rounded-lg hover:bg-whatsapp-dark transition-colors font-medium"
+                >
+                  <ApperIcon name="Settings" size={20} />
+                  Configure API
+                </Link>
+                {apiConfig.isValid && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-green-800">
+                      <ApperIcon name="CheckCircle" size={16} />
+                      <span className="text-sm font-medium">
+                        API is configured and ready
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Middle Column - Import & Compose */}
           <div className="space-y-8">
-            <ContactImporter
+<ContactImporter
               onContactsImported={handleContactsImported}
+              disabled={!apiConfig.isValid}
+              apiConfigured={apiConfig.isValid}
             />
             
             <MessageComposer
