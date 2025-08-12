@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import ApperIcon from "@/components/ApperIcon";
 import { cn } from "@/utils/cn";
 
-const FileUploadZone = ({ onFileSelect, accept = ".csv", className, isProcessing, disabled, ...domProps }) => {
+const FileUploadZone = ({ onFileSelect, accept = ".csv", className, isProcessing, disabled, acceptedFileTypes, ...domProps }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   
   const handleDragOver = (e) => {
