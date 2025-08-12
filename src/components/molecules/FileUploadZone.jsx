@@ -1,8 +1,8 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import ApperIcon from "@/components/ApperIcon";
 import { cn } from "@/utils/cn";
 
-const FileUploadZone = ({ onFileSelect, accept = ".csv", className, ...props }) => {
+const FileUploadZone = ({ onFileSelect, accept = ".csv", className, isProcessing, disabled, ...domProps }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   
   const handleDragOver = (e) => {
@@ -40,9 +40,9 @@ const FileUploadZone = ({ onFileSelect, accept = ".csv", className, ...props }) 
       className={cn(
         "border-2 border-dashed border-whatsapp-border rounded-lg p-6 text-center transition-all duration-200 hover:border-whatsapp-primary/50 hover:bg-whatsapp-primary/5",
         isDragOver && "border-whatsapp-primary bg-whatsapp-primary/10",
-        className
+className
       )}
-      {...props}
+      {...domProps}
     >
       <input
         type="file"
