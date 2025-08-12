@@ -1,0 +1,35 @@
+[
+  {
+    "Id": 1,
+    "phoneNumber": "1234567890",
+    "variables": {
+      "name": "John Doe",
+      "number": "1234567890"
+    },
+    "status": "pending",
+    "error": null,
+    "timestamp": null
+  },
+  {
+    "Id": 2,
+    "phoneNumber": "9876543210",
+    "variables": {
+      "name": "Jane Smith",
+      "number": "9876543210"
+    },
+    "status": "pending",
+    "error": null,
+    "timestamp": null
+  },
+  {
+    "Id": 3,
+    "phoneNumber": "5555555555",
+    "variables": {
+      "name": "Bob Johnson",
+      "number": "5555555555"
+    },
+    "status": "pending",
+    "error": null,
+    "timestamp": null
+  }
+]
