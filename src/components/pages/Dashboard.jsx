@@ -212,41 +212,22 @@ await whatsappService.sendBulkMessages(
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Configuration */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Import & Compose */}
           <div className="space-y-8">
-<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="text-center">
-                <ApperIcon name="Settings" size={48} className="mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  API Configuration
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Configure your WhatsApp Business API settings to start sending messages.
-                </p>
-                <Link 
-                  to="/api-config"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-whatsapp-primary text-white rounded-lg hover:bg-whatsapp-dark transition-colors font-medium"
-                >
-                  <ApperIcon name="Settings" size={20} />
-                  Configure API
-                </Link>
-                {apiConfig.isValid && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center justify-center gap-2 text-green-800">
-                      <ApperIcon name="CheckCircle" size={16} />
-                      <span className="text-sm font-medium">
-                        API is configured and ready
-                      </span>
-                    </div>
-                  </div>
-                )}
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">Message Setup</h2>
               </div>
+              <Link 
+                to="/api-config"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-whatsapp-primary text-white rounded-lg hover:bg-whatsapp-dark transition-colors text-sm font-medium"
+              >
+                <ApperIcon name="Settings" size={16} />
+                API Config
+              </Link>
             </div>
-          </div>
 
-          {/* Middle Column - Import & Compose */}
-          <div className="space-y-8">
 <ContactImporter
               onContactsImported={handleContactsImported}
               disabled={!apiConfig.isValid}
@@ -261,8 +242,7 @@ await whatsappService.sendBulkMessages(
               totalContacts={contacts.length}
             />
           </div>
-
-          {/* Right Column - Progress Tracking */}
+{/* Right Column - Progress Tracking */}
           <div className="lg:col-span-1">
             <SendProgressTracker
               contacts={contacts}

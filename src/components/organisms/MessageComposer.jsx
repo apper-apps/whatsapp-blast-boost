@@ -21,14 +21,13 @@ const MessageComposer = ({ message, onMessageUpdate, onSendAll, canSend, totalCo
   const selectedTemplate = availableTemplates.find(t => t.id === templateId);
   const availableVariables = ["name", "number"];
   
-const handleTemplateChange = (newTemplateId) => {
+const handleTemplateIdChange = (newTemplateId) => {
     setTemplateId(newTemplateId);
-    const template = availableTemplates.find(t => t.id === newTemplateId);
     onMessageUpdate({
       templateId: newTemplateId,
-      content: template?.preview || "",
-      variables: template ? extractVariables(template.preview) : [],
-      characterCount: template?.preview?.length || 0
+      content: `Template ID: ${newTemplateId}`,
+      variables: ["name", "number"],
+      characterCount: newTemplateId.length
     });
   };
   
@@ -53,24 +52,22 @@ const handleTemplateChange = (newTemplateId) => {
       </div>
 
 <div className="space-y-4">
-        <FormField label="Select Template Message">
-          <select
+        <FormField label="Template Message ID" required>
+          <Input
+            type="text"
             value={templateId}
-            onChange={(e) => handleTemplateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-whatsapp-primary focus:border-whatsapp-primary"
-          >
-            <option value="">Choose a template message...</option>
-            {availableTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name} (ID: {template.id})
-              </option>
-            ))}
-          </select>
+            onChange={(e) => handleTemplateIdChange(e.target.value)}
+            placeholder="Enter template message ID (e.g., welcome_001)"
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter the exact template message ID from your WhatsApp Business account
+          </p>
         </FormField>
-{selectedTemplate && (
+{templateId && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Template Variables
+              Available Variables
             </label>
             <div className="flex flex-wrap gap-2">
               {availableVariables.map((variable) => (
@@ -82,24 +79,24 @@ const handleTemplateChange = (newTemplateId) => {
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Variables will be automatically replaced with contact data
+              Variables will be automatically replaced with contact data when sending
             </p>
           </div>
         )}
 
-{selectedTemplate && (
+        {templateId && (
           <div className="border-t pt-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Message Preview
+              Template Configuration
             </label>
             <div className="bg-gray-50 border rounded-lg p-3">
-              <div className="bg-whatsapp-primary text-white rounded-lg p-3 max-w-sm">
-                <p className="text-sm whitespace-pre-wrap">
-                  {selectedTemplate.preview.replace(/\{\{name\}\}/g, "John Doe").replace(/\{\{number\}\}/g, "+1234567890")}
-                </p>
+              <div className="flex items-center gap-2 mb-2">
+                <ApperIcon name="MessageSquare" size={16} className="text-whatsapp-primary" />
+                <span className="font-medium text-gray-900">Template ID:</span>
+                <span className="font-mono bg-gray-200 px-2 py-1 rounded text-sm">{templateId}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Template ID: <span className="font-mono bg-gray-200 px-1 rounded">{templateId}</span>
+              <p className="text-xs text-gray-500">
+                This template will be sent to all contacts with their respective variable values
               </p>
             </div>
           </div>

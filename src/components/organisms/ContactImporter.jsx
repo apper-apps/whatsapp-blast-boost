@@ -1,145 +1,127 @@
-import React, { useRef, useState } from "react";
-import { toast } from "react-toastify";
+import { useState, useRef } from "react";
 import ApperIcon from "@/components/ApperIcon";
-import FormField from "@/components/molecules/FormField";
-import FileUploadZone from "@/components/molecules/FileUploadZone";
-import Error from "@/components/ui/Error";
-import Button from "@/components/atoms/Button";
-import Textarea from "@/components/atoms/Textarea";
 import Card from "@/components/atoms/Card";
+import Button from "@/components/atoms/Button";
+import FileUploadZone from "@/components/molecules/FileUploadZone";
+import { toast } from "react-toastify";
 
-const ContactImporter = ({ onContactsImported, disabled = false, apiConfigured = false }) => {
-  const [textInput, setTextInput] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+const ContactImporter = ({ onContactsImported, disabled, apiConfigured }) => {
+  const [contacts, setContacts] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const processTextInput = (text) => {
-    const lines = text.split(/\r?\n/);
-    const contacts = [];
-    
-    lines.forEach((line, index) => {
-      const numbers = line.split(/[,;|\t]/).map(num => num.trim()).filter(Boolean);
-      
-      numbers.forEach(number => {
-        // Basic phone number validation
-        const cleanNumber = number.replace(/\D/g, "");
-        if (cleanNumber.length >= 10 && cleanNumber.length <= 15) {
-          contacts.push({
-            Id: contacts.length + 1,
-            phoneNumber: cleanNumber,
-            variables: { name: `Contact ${contacts.length + 1}`, number: cleanNumber },
-            status: "pending",
-            error: null,
-            timestamp: null
-          });
-        }
-      });
-    });
-    
-    return contacts;
-  };
-
-  const processCSVFile = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const csv = e.target.result;
-          const lines = csv.split(/\r?\n/).filter(line => line.trim());
-          const contacts = [];
-          
-          lines.forEach((line, index) => {
-            const columns = line.split(",").map(col => col.trim().replace(/['"]/g, ""));
-            
-            if (columns[0]) {
-              const cleanNumber = columns[0].replace(/\D/g, "");
-              if (cleanNumber.length >= 10 && cleanNumber.length <= 15) {
-                contacts.push({
-                  Id: contacts.length + 1,
-                  phoneNumber: cleanNumber,
-                  variables: {
-                    name: columns[1] || `Contact ${contacts.length + 1}`,
-                    number: cleanNumber
-                  },
-                  status: "pending",
-                  error: null,
-                  timestamp: null
-                });
-              }
-            }
-          });
-          
-          resolve(contacts);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsText(file);
-    });
-  };
-
-const handleImportFromText = async () => {
-    if (!textInput.trim()) {
-      toast.error("Please enter phone numbers to import");
-      return;
-    }
-
-    setIsProcessing(true);
-    
-    try {
-      const contacts = processTextInput(textInput);
-      
-      if (contacts.length === 0) {
-        toast.error("No valid phone numbers found");
-        return;
-      }
-      
-      onContactsImported(contacts);
-      toast.success(`Imported ${contacts.length} contacts successfully`);
-      setTextInput("");
-    } catch (error) {
-      toast.error("Failed to process phone numbers");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  const fileInputRef = useRef(null);
 
   const handleFileSelect = async (file) => {
     if (!file) return;
     
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast.error("Please select a CSV file");
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      toast.error('Please select a valid CSV file');
       return;
     }
 
-    setSelectedFile(file);
     setIsProcessing(true);
     
     try {
-      const contacts = await processCSVFile(file);
+      const text = await file.text();
+      const lines = text.trim().split('\n');
       
-      if (contacts.length === 0) {
-        toast.error("No valid phone numbers found in CSV file");
+      if (lines.length < 2) {
+        toast.error('CSV file must contain at least a header row and one data row');
+        setIsProcessing(false);
         return;
       }
+
+      // Parse CSV header
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredFields = ['id', 'name', 'phonenumber'];
+      const missingFields = requiredFields.filter(field => !headers.includes(field));
       
-      onContactsImported(contacts);
-      toast.success(`Imported ${contacts.length} contacts from CSV successfully`);
-      setSelectedFile(null);
+      if (missingFields.length > 0) {
+        toast.error(`Missing required columns: ${missingFields.join(', ')}`);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Parse data rows
+      const parsedContacts = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        
+        if (values.length !== headers.length) {
+          toast.warning(`Skipping row ${i + 1}: incorrect number of columns`);
+          continue;
+        }
+
+        const contact = {};
+        headers.forEach((header, index) => {
+          contact[header === 'id' ? 'Id' : header === 'phonenumber' ? 'phoneNumber' : header] = values[index];
+        });
+
+        // Validate required fields
+        if (!contact.Id || !contact.name || !contact.phoneNumber) {
+          toast.warning(`Skipping row ${i + 1}: missing required data`);
+          continue;
+        }
+
+        // Convert Id to integer
+        contact.Id = parseInt(contact.Id);
+        if (isNaN(contact.Id)) {
+          toast.warning(`Skipping row ${i + 1}: invalid ID`);
+          continue;
+        }
+
+        // Format phone number
+        if (!contact.phoneNumber.startsWith('+')) {
+          contact.phoneNumber = '+' + contact.phoneNumber.replace(/[^\d]/g, '');
+        }
+
+        parsedContacts.push({
+          ...contact,
+          status: 'pending',
+          error: null,
+          timestamp: null
+        });
+      }
+
+      if (parsedContacts.length === 0) {
+        toast.error('No valid contacts found in CSV file');
+        setIsProcessing(false);
+        return;
+      }
+
+      setContacts(parsedContacts);
+      onContactsImported(parsedContacts);
+      toast.success(`Successfully imported ${parsedContacts.length} contacts`);
+      
     } catch (error) {
-      toast.error("Failed to process CSV file");
-      setSelectedFile(null);
-    } finally {
-      setIsProcessing(false);
+      toast.error('Failed to parse CSV file: ' + error.message);
     }
+    
+    setIsProcessing(false);
+  };
+
+  const handleDownloadSample = () => {
+    const sampleData = `id,name,phonenumber
+1,John Doe,+1234567890
+2,Jane Smith,+0987654321
+3,Mike Johnson,+1122334455`;
+
+    const blob = new Blob([sampleData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sample_contacts.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Sample CSV downloaded successfully');
   };
 
   const handleClearContacts = () => {
+    setContacts([]);
     onContactsImported([]);
-    toast.success("Contact list cleared");
+    toast.info('Contact list cleared');
   };
 
   return (
@@ -147,97 +129,91 @@ const handleImportFromText = async () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           <ApperIcon name="Users" size={20} />
-          Import Contacts
+          Contact Importer
         </h2>
-        <Button
-          onClick={handleClearContacts}
-          variant="outline"
-          size="sm"
-        >
-          <ApperIcon name="Trash2" size={16} />
-          Clear All
-        </Button>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <FormField label="Paste Phone Numbers">
-            <Textarea
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Enter phone numbers separated by commas or new lines
-Example:
-+1234567890, +0987654321
-+1122334455
-+9988776655"
-              rows={6}
-              className="font-mono text-sm"
-            />
-          </FormField>
-          
-          <div className="mt-3">
+        {contacts.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-500">
+              {contacts.length} contacts loaded
+            </span>
             <Button
-              onClick={handleImportFromText}
-              disabled={!textInput.trim() || isProcessing}
-              variant="primary"
+              onClick={handleClearContacts}
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700"
             >
-              {isProcessing ? (
-                <ApperIcon name="Loader2" size={16} className="animate-spin" />
-              ) : (
-                <ApperIcon name="UserPlus" size={16} />
-              )}
-              Import from Text
+              <ApperIcon name="Trash2" size={16} />
+              Clear
             </Button>
           </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 mb-4">
+          <Button
+            onClick={handleDownloadSample}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <ApperIcon name="Download" size={16} />
+            Download Sample CSV
+          </Button>
+          <p className="text-xs text-gray-500">
+            Download a sample file to see the required format
+          </p>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">or</span>
-          </div>
-        </div>
+        <FileUploadZone
+          onFileSelect={handleFileSelect}
+          isProcessing={isProcessing}
+          disabled={disabled}
+          acceptedFileTypes=".csv"
+          maxFileSize={5 * 1024 * 1024} // 5MB
+        />
 
-        <div>
-          <FileUploadZone
-            onFileSelect={handleFileSelect}
-            accept=".csv"
-          />
-          
-          {selectedFile && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ApperIcon name="FileText" size={16} className="text-gray-500" />
-                  <span className="text-sm font-medium">{selectedFile.name}</span>
-                  <span className="text-xs text-gray-500">
-                    ({(selectedFile.size / 1024).toFixed(1)} KB)
-                  </span>
-                </div>
-                {isProcessing && (
-                  <ApperIcon name="Loader2" size={16} className="animate-spin text-whatsapp-primary" />
+        {!apiConfigured && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <ApperIcon name="AlertTriangle" size={16} />
+              <span className="text-sm font-medium">
+                API configuration required before importing contacts
+              </span>
+            </div>
+          </div>
+        )}
+
+        {contacts.length > 0 && (
+          <div className="border-t pt-4">
+            <h3 className="font-medium text-gray-900 mb-3">Imported Contacts Preview</h3>
+            <div className="max-h-48 overflow-y-auto">
+              <div className="space-y-2">
+                {contacts.slice(0, 5).map((contact) => (
+                  <div key={contact.Id} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-whatsapp-primary rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-medium">
+                          {contact.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{contact.name}</p>
+                        <p className="text-sm text-gray-600">{contact.phoneNumber}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono text-gray-500">ID: {contact.Id}</span>
+                  </div>
+                ))}
+                {contacts.length > 5 && (
+                  <div className="text-center py-2 text-sm text-gray-500">
+                    ... and {contacts.length - 5} more contacts
+                  </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex gap-3">
-            <ApperIcon name="Info" size={16} className="text-blue-600 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">CSV Format Guidelines:</p>
-              <ul className="space-y-1 text-xs">
-                <li>• First column should contain phone numbers</li>
-                <li>• Second column can contain names (optional)</li>
-                <li>• Use international format: +1234567890</li>
-                <li>• Numbers without names will be auto-labeled</li>
-              </ul>
-            </div>
           </div>
-        </div>
+        )}
       </div>
     </Card>
   );
